@@ -93,18 +93,18 @@
   /* ---------- ステージ（空 → 宇宙 → 水中 → 空…、500mごと） ---------- */
   const STAGE_LEN = 500;
   const STAGES = [
-    { name: "空", gravity: 1150, flapMul: 1, drag: 0,
+    { name: "空", gravity: 750, maxFall: 460, flapMul: 1, drag: 0,
       enemies: [{ img: "airplane", h: 78, own: 50 }, { img: "lightning", h: 46, own: 320, hitH: 0.45 }, { img: "bag", h: 64, own: 40, wave: true }] },
-    { name: "宇宙", gravity: 560, flapMul: 1.08, drag: 0, // 高く飛び、落ちづらくなる
+    { name: "宇宙", gravity: 380, maxFall: 300, flapMul: 1.08, drag: 0, // 高く飛び、落ちづらくなる
       enemies: [{ img: "rocket", h: 66, own: 50 }, { img: "meteor", h: 54, own: 320, flip: true }, { img: "ufo", h: 56, own: 40, wave: true }] },
-    { name: "水中", gravity: 820, flapMul: 0.72, drag: 2.2, // 操作が重くなる
+    { name: "水中", gravity: 560, maxFall: 340, flapMul: 0.72, drag: 2.2, // 操作が重くなる
       enemies: [{ img: "whale", h: 92, own: 40 }, { img: "fish", h: 40, own: 320 }, { img: "jellyfish", h: 66, own: 40, wave: true }] }
   ];
   const stageIndex = (m) => Math.floor(m / STAGE_LEN) % STAGES.length;
 
   /* ---------- 定数 ---------- */
   const SPEED_START = 260, SPEED_MAX = 760;
-  const FLAP_MIN = 250, FLAP_MAX = 640;
+  const FLAP_MIN = 230, FLAP_MAX = 760; // 軽くタップは小さく、しっかり溜めると大きく羽ばたく
   const LIVES_START = 3, HURT_INV = 1.5;
   const GIRI_GAP = 26;                 // この距離以内でよけたら「ギリギリ」
   const DODGE_V = 760, DODGE_INV = 0.35, DODGE_CD = 1.1;
@@ -242,12 +242,14 @@
     if (stageBanner > 0) stageBanner -= dt;
 
     // 溜め：速くなるほど早く溜まる
-    if (holding) charge = Math.min(1, charge + dt / clamp(0.85 - ratio * 0.5, 0.35, 0.85));
+    if (holding) charge = Math.min(1, charge + dt / clamp(0.5 - ratio * 0.25, 0.25, 0.5));
 
     // アヒルの動き
     duck.x = VW * 0.74;
     duck.vy += st.gravity * dt;
     if (st.drag) duck.vy *= Math.exp(-st.drag * dt);
+    const diving = dodgeCd > DODGE_CD - 0.25; // 緊急回避の直後0.25秒だけは急降下を許す
+    if (duck.vy > st.maxFall && !diving) duck.vy = st.maxFall; // 落ちる速さに上限
     duck.y += duck.vy * dt;
     if (duck.y < 30) { duck.y = 30; duck.vy = Math.max(0, duck.vy); }
     if (duck.y > VH - 30) { duck.y = VH - 30; duck.vy = Math.min(0, duck.vy); }
