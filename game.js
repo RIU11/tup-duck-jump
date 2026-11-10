@@ -214,24 +214,39 @@
     dodgeCd = DODGE_CD;
     popup("緊急回避！", duck.x, duck.y - 50, "#9be7ff");
   }
+  let activeId = null; // 最初に触れた指だけで操作する（2本目以降の指は無視）
   window.addEventListener("pointerdown", (e) => {
-    if (state !== "playing" || (e.target.closest && e.target.closest("button, #announce"))) return;
+    if (state !== "playing" || activeId !== null || (e.target.closest && e.target.closest("button, #announce"))) return;
+    activeId = e.pointerId;
     holding = true; charge = 0; gestureUsed = false;
     downY = gameY(e); downT = performance.now();
   });
   window.addEventListener("pointermove", (e) => {
-    if (state !== "playing" || !holding || gestureUsed) return;
+    if (e.pointerId !== activeId || state !== "playing" || !holding || gestureUsed) return;
     const dy = (gameY(e) - downY) / (gameH / VH);
     if (dy > 45 && performance.now() - downT < 400) { gestureUsed = true; holding = false; charge = 0; dodge(); }
   });
-  function release() {
+  window.addEventListener("pointerup", (e) => {
+    if (e.pointerId !== activeId) return;
+    activeId = null;
     if (state !== "playing" || !holding) return;
     holding = false;
     if (!gestureUsed) flap();
     charge = 0;
+  });
+  function cancelTouch() { activeId = null; holding = false; charge = 0; }
+  window.addEventListener("pointercancel", (e) => { if (e.pointerId === activeId) cancelTouch(); });
+
+  // ほかのアプリに切り替えたり通知を開いたりしたら、押しっぱなしを解除して一時停止
+  function pause() {
+    cancelTouch();
+    if (state !== "playing") return;
+    state = "paused";
+    document.getElementById("pause").hidden = false;
   }
-  window.addEventListener("pointerup", release);
-  window.addEventListener("pointercancel", () => { holding = false; charge = 0; });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
+  window.addEventListener("blur", pause);
+  window.addEventListener("pagehide", pause);
 
   /* ---------- 更新 ---------- */
   function hurt() {
@@ -244,7 +259,7 @@
 
   function update(dt) {
     time += dt;
-    if (state !== "playing") { bgOff += 60 * dt; return; }
+    if (state !== "playing") { if (state === "title") bgOff += 60 * dt; return; }
     const st = STAGES[stage];
     const ratio = (speed - SPEED_START) / (SPEED_MAX - SPEED_START);
 
@@ -439,7 +454,7 @@
     let sx = 0, sy = 0;
     if (shake > 0) { sx = rnd(-6, 6); sy = rnd(-6, 6); }
     ctx.translate(sx, sy);
-    BG[state === "playing" || state === "over" ? stage : 0](bgOff);
+    BG[state === "title" || state === "loading" ? 0 : stage](bgOff);
 
     if (giriFlash > 0) { // ギリギリのときの集中線
       ctx.save(); ctx.globalAlpha = giriFlash * 1.4; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
@@ -474,7 +489,7 @@
       ctx.restore();
     });
 
-    if (state === "playing" || state === "over") {
+    if (state === "playing" || state === "over" || state === "paused") {
       // アヒル（上昇中は頭が上がる、羽ばたいた瞬間に少しつぶれる）
       const im = duckImg();
       if (im && !(inv > 0 && item !== "propeller" && Math.floor(inv * 14) % 2 === 0)) {
@@ -561,6 +576,11 @@
     $("best-title").textContent = best;
     setTimeout(() => { $("over").hidden = false; }, 600);
   }
+  $("resume-btn").addEventListener("click", () => {
+    $("pause").hidden = true;
+    state = "playing";
+    last = performance.now(); // 止まっていた時間ぶん一気に進まないように
+  });
   $("start-btn").addEventListener("click", () => { lockLandscape(); startGame(); });
   $("retry-btn").addEventListener("click", () => { lockLandscape(); startGame(); });
   $("best-title").textContent = best;
