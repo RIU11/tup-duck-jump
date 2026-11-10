@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#3f8fd6">
 <meta name="robots" content="noindex,nofollow">
 <title>Tup Duck Jump</title>
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="app">
 <canvas id="game"></canvas>
-
-<div id="rotate" class="overlay"><p>スマホを横向きにして遊んでください</p></div>
 
 <div id="title" class="overlay">
   <div class="card">
@@ -36,6 +36,7 @@
     <p class="best">ベストスコア：<span id="best-over">0</span></p>
     <button type="button" id="retry-btn" class="btn">もう一度</button>
   </div>
+</div>
 </div>
 
 <script src="announce.js"></script>

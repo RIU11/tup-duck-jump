@@ -1,0 +1,10 @@
+{
+  "name": "Tup Duck Jump",
+  "short_name": "Duck Jump",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#3f8fd6",
+  "theme_color": "#3f8fd6",
+  "icons": [{ "src": "assets/duck.png", "sizes": "360x175", "type": "image/png" }]
+}

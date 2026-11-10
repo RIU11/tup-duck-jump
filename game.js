@@ -12,16 +12,35 @@
   /* ---------- 画面（高さ540の仮想座標で描く） ---------- */
   const VH = 540;
   const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
-  let VW = 960, scale = 1;
+  const app = document.getElementById("app");
+  let VW = 960, scale = 1, rot = false, gameH = 1;
+  // 縦向きのままなら、画面全体を90度回して横画面として使う（iPhoneはページから向きを固定できないため）
   function resize() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.round(window.innerWidth * dpr);
-    canvas.height = Math.round(window.innerHeight * dpr);
+    rot = window.innerHeight > window.innerWidth;
+    document.body.classList.toggle("rot", rot);
+    const gw = rot ? window.innerHeight : window.innerWidth;
+    gameH = rot ? window.innerWidth : window.innerHeight;
+    app.style.width = gw + "px";
+    app.style.height = gameH + "px";
+    canvas.width = Math.round(gw * dpr);
+    canvas.height = Math.round(gameH * dpr);
     scale = canvas.height / VH;
     VW = canvas.width / scale;
   }
   window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", () => setTimeout(resize, 200));
   resize();
+  // 指の位置を、ゲーム画面の上から何pxかに直す（回しているときは画面の右端がゲームの上になる）
+  const gameY = (e) => rot ? window.innerWidth - e.clientX : e.clientY;
+  // Androidなどでは、全画面にして横向きに固定する（ボタンを押したときにしか頼めない）
+  function lockLandscape() {
+    const el = document.documentElement;
+    if (!el.requestFullscreen || document.fullscreenElement) return;
+    el.requestFullscreen({ navigationUI: "hide" }).then(() => {
+      if (screen.orientation && screen.orientation.lock) return screen.orientation.lock("landscape");
+    }).catch(() => { /* 固定できない端末は、回して表示するだけにする */ });
+  }
 
   /* ---------- 画像 ---------- */
   const SRC = {
@@ -198,11 +217,11 @@
   window.addEventListener("pointerdown", (e) => {
     if (state !== "playing" || (e.target.closest && e.target.closest("button, #announce"))) return;
     holding = true; charge = 0; gestureUsed = false;
-    downY = e.clientY; downT = performance.now();
+    downY = gameY(e); downT = performance.now();
   });
   window.addEventListener("pointermove", (e) => {
     if (state !== "playing" || !holding || gestureUsed) return;
-    const dy = (e.clientY - downY) / (window.innerHeight / VH);
+    const dy = (gameY(e) - downY) / (gameH / VH);
     if (dy > 45 && performance.now() - downT < 400) { gestureUsed = true; holding = false; charge = 0; dodge(); }
   });
   function release() {
@@ -542,8 +561,8 @@
     $("best-title").textContent = best;
     setTimeout(() => { $("over").hidden = false; }, 600);
   }
-  $("start-btn").addEventListener("click", startGame);
-  $("retry-btn").addEventListener("click", startGame);
+  $("start-btn").addEventListener("click", () => { lockLandscape(); startGame(); });
+  $("retry-btn").addEventListener("click", () => { lockLandscape(); startGame(); });
   $("best-title").textContent = best;
   $("start-btn").disabled = true;
   loadAll().then(() => {

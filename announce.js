@@ -15,7 +15,7 @@
       '<button class="btn" type="button" data-an="close">閉じる</button></div>';
     var d = document.createElement("div");
     d.id = "announce"; d.innerHTML = html;
-    document.body.appendChild(d);
+    (document.getElementById("app") || document.body).appendChild(d); // 画面を回しているときも同じ向きで出す
     d.addEventListener("click", function (ev) {
       if (ev.target.closest('[data-an="close"]')) {
         if (d.querySelector("#an-dontshow").checked) store.set("announceSeen", e.id);
